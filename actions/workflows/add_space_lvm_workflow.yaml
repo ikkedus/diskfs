@@ -1,0 +1,38 @@
+version: 1.0
+description: check lvm for space to expand
+
+input:
+  - host
+  - volume
+  - size
+tasks:
+  getFacts:
+    action: lvm.getSpareLVM
+    input:
+      host: '<% ctx(host) %>,'
+      volume: <% ctx(volume) %>
+    next: 
+      - when: <% succeeded() and result().output.space >= 2 %>
+        publish:
+          - vg: <% result().output.volumegroup %>
+          - size: <% result().output.size %>
+        do: extend
+      - when: <% failed() %>
+        publish:
+          - stderr: <% result().stderr %>
+  extend:
+    action: ansible.playbook
+    input:
+      playbook: /opt/stackstorm/packs/diskfs/playbooks/addSpaceLVM.yaml
+      inventory_file: '<% ctx(host) %>,'
+      sudo: yes
+      extra_vars:
+        - lv: <% ctx(volume).trim() %>
+        - vg: <% ctx(vg).trim() %>
+        - size: <% ctx(size)+1 %>
+    next:
+      - when: <% succeeded() %>
+        publish:
+        - stdout: <% result().stdout %>
+output:
+  - stdout: <% ctx(stdout) %>

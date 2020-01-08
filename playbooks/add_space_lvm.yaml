@@ -1,0 +1,24 @@
+---
+  - hosts: all
+    remote_user: ubuntu
+    become: yes
+    tasks:
+      - name: addSpaceToLVM
+        block:
+        - debug:
+           msg:
+           - vg: '{{vg}}'
+           - lv: '{{lv}}'
+           - size: '{{size}}'
+           - rs: '/dev/{{vg}}/{{lv}}'
+        - name: extend lvm
+          lvol:
+            vg: "{{vg}}"
+            lv: "{{lv}}"
+            size: "{{size}}g"
+            force: true
+        - name: resize2fs lvm
+          command: "resize2fs /dev/{{vg}}/{{lv}}"
+        rescue:
+          - fail:
+              msg: extending lvm partition failed

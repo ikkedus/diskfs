@@ -1,0 +1,19 @@
+---
+name: "add_space_to_lvm"
+pack: diskfs
+description: "this adds extends the lvm partition"
+runner_type: orquesta
+entry_point: workflows/add_space_to_lvm_workflow.yaml
+enabled: true
+parameters:
+  host:
+    required: true
+    type: string
+  volume:
+    required: true
+    type: string
+  size:
+    description: this defines how many gigabytes of storage should be added to LVM.
+    default: "1"
+    required: true
+    type: string

@@ -1,0 +1,10 @@
+---
+ref: diskfs
+name: diskfs
+description: this contains everything to automate disks.
+version: 0.0.1
+python_versions:
+  - "2"
+  - "3"
+author: Martin van der Gragt
+email: martin.vandergragt@cyso.nl

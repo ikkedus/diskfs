@@ -1,0 +1,14 @@
+---
+name: "get_spare_lvm"
+pack: diskfs
+description: "this gets lvm facts using ansible"
+runner_type: orquesta
+entry_point: workflows/getSpareLVM_workflow.yaml
+enabled: true
+parameters:
+  host:
+    required: true
+    type: string
+  volume:
+    required: true
+    type: string

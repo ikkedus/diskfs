@@ -1,0 +1,86 @@
+version: 1.0
+
+input:
+  - host
+  - serviceoutput
+tasks:
+  get_information:
+    action: ansible.playbook
+    input:
+      playbook: /opt/stackstorm/packs/diskfs/playbooks/get_information.yaml
+      inventory_file: '<% ctx(host) %>,'
+      sudo: yes
+    next:
+      - when: <% succeeded() %>
+        publish:
+          - information: <% from_json_string("{"+result().stdout.split("'{")[1].split("}'")[0]+"}") %>
+          - volume: <% ctx(serviceoutput).split('free space')[1].split(':')[1].split(' ')[1].split(' ')[0] %>
+        do: 
+          -  evaluate
+  evaluate:
+    action: core.echo
+    input:
+      message: |
+        evaluating
+    next:
+      - when: <% ctx(volume) != "/var/log/" and ctx(volume) != "/" and len(ctx(information).mounts.where($.mount = ctx(volume))) != 0 %>
+        do: echo_extend
+      - when: <% ctx(volume) = "/var/log/" or ctx(volume) = "/" %>
+        do: echo_clean_junk
+  echo_clean_junk:
+    action: core.echo
+    input:
+      message: |
+        we found <% ctx(information).size %> of junk files.
+        Can i Purge them?
+        \*files:*
+        <% to_yaml_string(ctx(information).files) %>
+    next:
+      - do: premission_clean_junk
+  premission_clean_junk:
+    action: core.ask
+    input:
+      ttl: 5
+      schema:
+        type: object
+        properties:
+          premission:
+            type: boolean
+            description: "I would like to delete some files"
+    next:
+      - when: <% succeeded() %>
+        do: clean_junk
+      - when: <% failed() %>
+        do: fail
+  clean_junk:
+    action: core.echo
+    input:
+      message: |
+        Deleting all junkfiles.
+  echo_extend:
+    action: core.echo
+    input:
+      message: |
+        StackStorm wants to extend a LVM volume, "<% ctx(volume) %>"
+    next:
+      - do: premission_extend
+  premission_extend:
+    action: core.ask
+    input:
+      ttl: 5
+      schema:
+        type: object
+        properties:
+          premission:
+            type: boolean
+            description: "I would like to extend a LVM volume"
+    next:
+    - when: <% succeeded() %>
+      do: extend
+    - when: <% failed() %>
+      do: fail
+  extend:
+    action: core.echo
+    input:
+      message: |
+        extending <% ctx(volume) %> on <% ctx(host) %>

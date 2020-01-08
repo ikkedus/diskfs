@@ -1,0 +1,23 @@
+---
+  - hosts: all
+    remote_user: ubuntu
+    become: yes
+    gather_facts: yes
+    tasks:
+      - name: addSpaceToLVM
+        block:
+          - name: find old logs in /var/log
+            find:
+              paths: /var/log
+              age: 7d
+              recurse: yes
+              age_stamp: atime
+            register: files
+          - set_fact:
+              info:
+                bytes: "{{files.files | sum(attribute='size')}}" 
+                size: "{{files.files | sum(attribute='size') | human_readable}}"
+                files: "{{files.files| map(attribute='path') | list }}"
+                mounts: "{{ansible_mounts}}"
+          - debug:
+              msg: "{{info | to_json}}"

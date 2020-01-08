@@ -1,0 +1,14 @@
+---
+  - hosts: all
+    remote_user: ubuntu
+    become: yes
+    tasks:
+      - name: GetLVMremainingsize
+        block:
+        - debug:
+           msg:
+           - lvs: "{{ansible_lvm.lvs[lv]}}"
+           - vgs: "{{ansible_lvm.vgs[ansible_lvm.lvs[lv].vg]}}"
+        rescue:
+          - fail:
+              msg: no information available

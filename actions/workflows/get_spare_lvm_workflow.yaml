@@ -1,0 +1,90 @@
+version: 1.0
+description: check lvm for space to expand
+vars:
+  - space: "0"
+  - size: "0"
+  - volume_group: ""
+input:
+  - host
+  - volume
+tasks:
+  check:
+    action: ansible.playbook
+    input:
+      playbook: /opt/stackstorm/packs/lvm/playbooks/getSpareLVM.yaml
+      inventory_file: '<% ctx(host) %>,'
+      sudo: yes
+      extra_vars:
+        - lv: <% ctx(volume) %>
+    next:
+      - when: <% result().stdout.indexOf('no size available') != -1 %>
+        publish:
+          - facts:  <% result().stdout %> 
+          - stdout: <% result().stdout %>
+          - stderr: <% result().stderr %>
+        do: fail
+      - when: <% succeeded() and result().stdout.indexOf('no size available') = -1 %>
+        publish:
+          - facts: <% result().stdout %>
+          - stdout: <% result().stdout %>
+          - stderr: <% result().stderr %>
+        do: 
+          - getspace
+          - getvolumegroup
+          - getsize
+      - when: <% failed() %>
+        publish:
+          - stdout: <% result().stdout %>
+          - stderr: <% result().stderr %>
+  getspace:
+    action: core.local
+    input:
+      cmd: echo "<% ctx(facts) %>" | grep  free_g | cut -d ":" -f2
+    next:
+      - when: <% succeeded() %>
+        publish:
+          - stdout: <% result().stdout %>
+          - space: <% result().stdout %>
+          - stderr: <% result().stderr %>
+      - when: <% failed() %>
+        publish:
+          - stdout: <% result().stdout %>
+          - stderr: <% result().stderr %>
+        do: fail
+  getsize:
+    action: core.local
+    input:
+      cmd: echo "<% ctx(facts) %>" | grep -m 1 size_g | cut -d ":" -f2
+    next:
+      - when: <% succeeded() %>
+        publish:
+          - stdout: <% result().stdout %>
+          - size: <% result().stdout %>
+          - stderr: <% result().stderr %>
+      - when: <% failed() %>
+        publish:
+          - stdout: <% result().stdout %>
+          - stderr: <% result().stderr %>
+        do: fail
+  getvolumegroup:
+    action: core.local
+    input:
+      cmd: echo "<% ctx(facts) %>" | grep vg | cut -d ":" -f2
+    next:
+      - when: <% succeeded() %>
+        publish:
+          - volume_group: <% result().stdout %>
+          - stdout: <% result().stdout %>
+          - stderr: <% result().stderr %>
+      - when: <% failed() %>
+        publish:
+          - stdout: <% result().stdout %>
+          - stderr: <% result().stderr %>
+        do: fail
+output:
+  - facts: <% ctx(facts) %>
+  - space: <% float(ctx(space).trim().trim("'")) %>
+  - size: <% float(ctx(size).trim().trim("'")) %>
+  - volumegroup: <% ctx(volume_group) %>
+  - stdout: <% ctx(stdout) %>
+  - stderr: <% ctx(stderr) %>
